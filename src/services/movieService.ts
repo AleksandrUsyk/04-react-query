@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import type { Movie } from "../types/movie";
 
@@ -18,21 +19,29 @@ export interface FetchMoviesParams {
   language?: string;
 }
 
-interface FetchMoviesResponse {
+export interface FetchMoviesResponse {
   results: Movie[];
+  total_pages: number;
 }
 
-export async function fetchMovies({
+export async function fetchMoviesApi({
   query,
   page = 1,
-  includeAdult = false,
-  language = "en-US",
-}: FetchMoviesParams): Promise<Movie[]> {
+}: FetchMoviesParams): Promise<FetchMoviesResponse> {
   const { data } = await api.get<FetchMoviesResponse>("/search/movie", {
-    params: { query, page, include_adult: includeAdult, language },
+    params: { query, page, include_adult: false, language: "en-US" },
   });
-  return data.results;
+  return data;
 }
+
+export const useFetchMovies = (query: string, page: number) => {
+  return useQuery<FetchMoviesResponse, Error>({
+    queryKey: ["movies", query, page],
+    queryFn: () => fetchMoviesApi({ query, page }),
+    enabled: !!query,
+    staleTime: 1000 * 60 * 5,
+  });
+};
 
 export function buildImageUrl(path: string | null, size: "w500" | "original") {
   return path ? `https://image.tmdb.org/t/p/${size}${path}` : "";
